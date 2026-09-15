@@ -59,6 +59,19 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             | tee build-release.log
 
+      - name: Verify bundled web resources
+        shell: bash
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Instagram.app"
+          test -d "$APP_PATH"
+          shopt -s nullglob
+          RESOURCE_PATHS=(Instagram/Scripts/*.js Instagram/Scripts/*.css)
+          test "${#RESOURCE_PATHS[@]}" -gt 0
+          for RESOURCE_PATH in "${RESOURCE_PATHS[@]}"; do
+            RESOURCE_NAME="${RESOURCE_PATH##*/}"
+            test -f "$APP_PATH/$RESOURCE_NAME"
+          done
+
       - name: Package IPA
         shell: bash
         run: |

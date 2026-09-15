@@ -1,7 +1,7 @@
 name: Instagram
 
 options:
-  minimumXcodeGenVersion: 2.42.0
+  minimumXcodeGenVersion: 2.46.0
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -26,12 +26,15 @@ targets:
       - path: Instagram
         excludes:
           - Scripts
+      # Group resources are copied as individual files at the app bundle root.
+      - path: Instagram/Scripts
+        type: group
+        buildPhase: resources
       - path: Restrictions
       - path: Settings
       - path: UI
-    resources:
-      - path: Instagram/Scripts
       - path: Resources/Assets.xcassets
+        buildPhase: resources
     info:
       path: Resources/Info.plist
     settings:
