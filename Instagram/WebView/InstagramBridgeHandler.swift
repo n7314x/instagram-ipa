@@ -76,7 +76,8 @@ final class InstagramBridgeHandler: NSObject, WKScriptMessageHandlerWithReply {
 }
 
 /// A weak forwarding object prevents WKUserContentController from retaining the
-/// bridge owner through its message-handler table.
+/// bridge owner through its message-handler table. If a WebView outlives its pool,
+/// the missing target fails closed, so actor-isolated cleanup is not needed in deinit.
 final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandlerWithReply {
     weak var target: (any WKScriptMessageHandlerWithReply)?
 

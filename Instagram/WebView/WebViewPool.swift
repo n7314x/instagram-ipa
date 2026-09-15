@@ -57,7 +57,6 @@ enum InstagramSection: Int, CaseIterable, Identifiable, Sendable {
 @MainActor
 final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
     private let dataStore = WKWebsiteDataStore.default()
-    private let processPool = WKProcessPool()
     private let policy: PolicyCoordinator
     private var entries: [InstagramSection: Entry] = [:]
     private var discoveredProfileURL: URL?
@@ -67,15 +66,6 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
     init(policy: PolicyCoordinator) {
         self.policy = policy
         super.init()
-    }
-
-    deinit {
-        for entry in entries.values {
-            entry.contentController.removeScriptMessageHandler(
-                forName: InstagramBridgeHandler.messageName,
-                contentWorld: .page
-            )
-        }
     }
 
     func webView(for section: InstagramSection) -> WKWebView {
@@ -98,7 +88,6 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
 
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = dataStore
-        configuration.processPool = processPool
         configuration.userContentController = contentController
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
