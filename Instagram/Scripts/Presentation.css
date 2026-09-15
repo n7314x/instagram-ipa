@@ -1,0 +1,14 @@
+/* Early, conservative rules. Semantic JavaScript performs the contextual work. */
+html {
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-x: none;
+}
+
+article:has([aria-label="Sponsored"]),
+article:has([aria-label="Advertisement"]) {
+  display: none !important;
+}
+
+[data-ig-shield-disabled] {
+  pointer-events: none !important;
+}

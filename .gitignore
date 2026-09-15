@@ -1,0 +1,26 @@
+# Xcode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.build/
+build/
+
+# Unsigned packaging output
+Payload/
+*.ipa
+*.app
+*.dSYM
+
+# macOS and editor files
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Temporary files and logs
+*.tmp
+*.log

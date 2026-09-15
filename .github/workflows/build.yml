@@ -1,0 +1,89 @@
+name: Build unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test and package Instagram
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Run policy unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          SIMULATOR_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin)["devices"]; matches=[device for runtime, devices in data.items() if "iOS-26" in runtime for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")]; print(matches[0]["udid"] if matches else "")')"
+          test -n "$SIMULATOR_ID"
+          xcodebuild test \
+            -project Instagram.xcodeproj \
+            -scheme Instagram \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath build/TestDerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | tee build-tests.log
+
+      - name: Build unsigned device application
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Instagram.xcodeproj \
+            -scheme Instagram \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | tee build-release.log
+
+      - name: Package IPA
+        shell: bash
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Instagram.app"
+          test -d "$APP_PATH"
+          mkdir -p Payload
+          ditto "$APP_PATH" Payload/Instagram.app
+          /usr/bin/zip -qry Instagram.ipa Payload
+          test -s Instagram.ipa
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instagram-IPA
+          path: Instagram.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instagram-build-logs
+          path: |
+            build-tests.log
+            build-release.log
+          if-no-files-found: warn
+          retention-days: 14

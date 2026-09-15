@@ -1,0 +1,73 @@
+name: Instagram
+
+options:
+  minimumXcodeGenVersion: 2.42.0
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_STYLE: Manual
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+targets:
+  Instagram:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: App
+      - path: Navigation
+      - path: Instagram
+        excludes:
+          - Scripts
+      - path: Restrictions
+      - path: Settings
+      - path: UI
+    resources:
+      - path: Instagram/Scripts
+      - path: Resources/Assets.xcassets
+    info:
+      path: Resources/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: xyz.n9007314.instagram
+        PRODUCT_NAME: Instagram
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+
+  InstagramTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Instagram
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: xyz.n9007314.instagram.tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+
+schemes:
+  Instagram:
+    build:
+      targets:
+        Instagram: all
+    test:
+      gatherCoverageData: true
+      targets:
+        - InstagramTests
+    run:
+      config: Debug
+    archive:
+      config: Release
