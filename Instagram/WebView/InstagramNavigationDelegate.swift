@@ -20,6 +20,14 @@ final class InstagramNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDel
             return
         }
 
+        if Self.isInstagramAppOpeningURL(url) {
+#if DEBUG
+            NSLog("Instagram app-open navigation blocked: %@", url.scheme ?? "unknown-scheme")
+#endif
+            decisionHandler(.cancel)
+            return
+        }
+
         if url.scheme == "about" {
             decisionHandler(.allow)
             return
@@ -59,7 +67,11 @@ final class InstagramNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDel
         guard navigationAction.targetFrame == nil,
               let url = navigationAction.request.url else { return nil }
 
-        if Self.isInstagramOwned(url), !InstagramRoutePolicy.isBlocked(url, snapshot: policySnapshot()) {
+        if Self.isInstagramAppOpeningURL(url) {
+#if DEBUG
+            NSLog("Instagram app-open window request blocked: %@", url.scheme ?? "unknown-scheme")
+#endif
+        } else if Self.isInstagramOwned(url), !InstagramRoutePolicy.isBlocked(url, snapshot: policySnapshot()) {
             webView.load(navigationAction.request)
         } else if url.scheme?.lowercased() == "https" {
             UIApplication.shared.open(url)
@@ -95,14 +107,29 @@ final class InstagramNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDel
         decisionHandler(.deny)
     }
 
-    static func isInstagramOwned(_ url: URL) -> Bool {
+    nonisolated static func isInstagramOwned(_ url: URL) -> Bool {
         guard let host = url.host?.lowercased() else { return false }
         return isInstagramHost(host) || host == "facebook.com" || host.hasSuffix(".facebook.com")
     }
 
-    static func isInstagramHost(_ host: String) -> Bool {
+    nonisolated static func isInstagramHost(_ host: String) -> Bool {
         let normalized = host.lowercased()
         return normalized == "instagram.com" || normalized.hasSuffix(".instagram.com")
+    }
+
+    nonisolated static func isInstagramAppOpeningURL(_ url: URL) -> Bool {
+        let scheme = url.scheme?.lowercased()
+        if scheme == "instagram" || scheme == "instagram-stories" {
+            return true
+        }
+        if scheme == "intent" {
+            return url.absoluteString.localizedCaseInsensitiveContains("instagram")
+        }
+
+        let host = url.host?.lowercased()
+        guard host == "apps.apple.com" || host == "itunes.apple.com" else { return false }
+        return (url.path + "?" + (url.query ?? ""))
+            .localizedCaseInsensitiveContains("instagram")
     }
 }
 

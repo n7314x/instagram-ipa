@@ -3,7 +3,7 @@ import WebKit
 
 enum InstagramWebResourceManifest {
     // Every JavaScript file either bootstraps or enforces application policy.
-    static let documentStartScriptNames = ["Bootstrap"]
+    static let documentStartScriptNames = ["Bootstrap", "NavigationChromeFilter"]
     static let documentEndScriptNames = [
         "StoryFilter",
         "StoryViewerFilter",

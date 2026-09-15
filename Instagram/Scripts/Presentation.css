@@ -12,3 +12,12 @@ article:has([aria-label="Advertisement"]) {
 [data-ig-shield-disabled] {
   pointer-events: none !important;
 }
+
+/* Deep links are hidden at document start; semantic text and grouped navigation
+   are handled by NavigationChromeFilter.js once the relevant DOM exists. */
+a[href^="instagram://" i],
+a[href^="instagram-stories://" i],
+[data-ig-shield-web-navigation="true"],
+[data-ig-shield-hidden="app-open-cta"] {
+  display: none !important;
+}

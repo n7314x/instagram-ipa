@@ -69,6 +69,19 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
     }
 
     func webView(for section: InstagramSection) -> WKWebView {
+        webView(for: section, initialURL: nil)
+    }
+
+    func prepareHome(at url: URL) {
+#if DEBUG
+        if InstagramSessionRouting.isAuthenticationFlowURL(url) {
+            NSLog("Instagram intentionally preparing logged-out route: /accounts/login/")
+        }
+#endif
+        _ = webView(for: .home, initialURL: url)
+    }
+
+    private func webView(for section: InstagramSection, initialURL: URL?) -> WKWebView {
         if let existing = entries[section] {
             return existing.webView
         }
@@ -112,15 +125,18 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
         webView.isInspectable = true
 #endif
 
-        entries[section] = Entry(
+        let entry = Entry(
             webView: webView,
             bridge: bridge,
             weakHandler: weakHandler,
             navigationDelegate: navigationDelegate,
             contentController: contentController
         )
+        entries[section] = entry
 
-        let url = section == .profile ? (discoveredProfileURL ?? section.initialURL) : section.initialURL
+        let defaultURL = section == .profile ? (discoveredProfileURL ?? section.initialURL) : section.initialURL
+        let url = initialURL ?? defaultURL
+        entry.lastRequestedURL = url
         webView.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy))
         return webView
     }
@@ -153,6 +169,7 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
             entry.wasStoppedByPolicy = false
             webView.reload()
         } else if webView.url == nil {
+            entries[section]?.lastRequestedURL = section.initialURL
             webView.load(URLRequest(url: section.initialURL))
         }
         for (otherSection, entry) in entries where otherSection != section {
@@ -190,13 +207,21 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
         discoveredProfileURL = nil
 
         for entry in entries.values {
+            entry.lastRequestedURL = InstagramSection.home.initialURL
             entry.webView.load(URLRequest(url: InstagramSection.home.initialURL))
         }
     }
 
     func showLogin() {
-        guard let url = URL(string: "https://www.instagram.com/accounts/login/") else { return }
-        webView(for: .home).load(URLRequest(url: url))
+        let webView = webView(for: .home, initialURL: InstagramSessionRouting.loginURL)
+        let entry = entries[.home]
+        let currentURL = webView.url ?? webView.backForwardList.currentItem?.url ?? entry?.lastRequestedURL
+        guard !InstagramSessionRouting.isAuthenticationFlowURL(currentURL) else { return }
+#if DEBUG
+        NSLog("Instagram intentionally loading logged-out route: /accounts/login/")
+#endif
+        entry?.lastRequestedURL = InstagramSessionRouting.loginURL
+        webView.load(URLRequest(url: InstagramSessionRouting.loginURL))
     }
 
     func bridgeShouldAllowCreation(_ kind: CreationKind) -> Bool {
@@ -213,6 +238,7 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
         discoveredProfileURL = url
         guard let profile = entries[.profile]?.webView,
               profile.url == InstagramSection.profile.initialURL else { return }
+        entries[.profile]?.lastRequestedURL = url
         profile.load(URLRequest(url: url))
     }
 
@@ -241,6 +267,7 @@ final class WebViewPool: NSObject, ObservableObject, InstagramBridgeDelegate {
         let navigationDelegate: InstagramNavigationDelegate
         let contentController: WKUserContentController
         var wasStoppedByPolicy = false
+        var lastRequestedURL: URL?
 
         init(
             webView: WKWebView,

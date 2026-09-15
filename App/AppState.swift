@@ -24,12 +24,12 @@ final class AppState: ObservableObject {
     func start() async {
         policy.refresh()
         guard !policy.dailyLimit.isLocked else { return }
-        _ = webViews.webView(for: .home)
-        if await sessionManager.hasInstagramCookies() {
-            setSessionState(.authenticated)
-        } else {
-            setSessionState(.loggedOut)
-        }
+        let hasSessionCookie = await sessionManager.hasInstagramCookies()
+        let decision = InstagramSessionRouting.launchDecision(
+            hasSessionCookie: hasSessionCookie
+        )
+        webViews.prepareHome(at: decision.initialHomeURL)
+        setSessionState(decision.sessionState)
     }
 
     func scenePhaseChanged(_ phase: ScenePhase) {
@@ -58,20 +58,33 @@ final class AppState: ObservableObject {
     func signOut() async {
         await webViews.clearInstagramSession()
         selectedSection = .home
-        sessionState = .loggedOut
         isSettingsPresented = false
+        setSessionState(.loggedOut)
     }
 
     private func setSessionState(_ state: InstagramSessionState) {
-        guard state != .unknown, state != sessionState else { return }
+        guard state != .unknown else { return }
+
+        // This is intentionally idempotent. Repeated logged-out reports from the
+        // login DOM must not reload an in-progress login or challenge flow.
+        if state == .loggedOut {
+            webViews.showLogin()
+        }
+
+        guard state != sessionState else { return }
         let wasAuthenticated = sessionState == .authenticated
+#if DEBUG
+        NSLog("Instagram session state: %@ -> %@", sessionState.rawValue, state.rawValue)
+#endif
         sessionState = state
         if state == .authenticated {
+#if DEBUG
+            NSLog("Instagram authenticated state detected; preparing persistent webviews")
+#endif
             webViews.prepareAllSections()
             webViews.resumeSelected(selectedSection)
         } else if wasAuthenticated {
             selectedSection = .home
-            webViews.showLogin()
         }
     }
 }

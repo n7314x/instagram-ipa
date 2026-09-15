@@ -53,7 +53,6 @@
     for (const [name, filter] of filters) {
       try { filter(); } catch (error) { console.debug("IGShield filter failed", name, error); }
     }
-    try { hideWebNavigation(); } catch (_) {}
     try { assessPage(); } catch (_) {}
   }
 
@@ -65,20 +64,6 @@
 
   function registerFilter(name, filter) { filters.set(name, filter); schedule(); }
   function registerClickHandler(handler) { clickHandlers.push(handler); }
-
-  function hideWebNavigation() {
-    const height = window.innerHeight;
-    document.querySelectorAll("nav, [role='navigation']").forEach((nav) => {
-      if (!(nav instanceof HTMLElement)) return;
-      const links = Array.from(nav.querySelectorAll("a[href]"));
-      const routeHits = links.filter((link) =>
-        /\/(reels|direct|explore)\/?/i.test(link.getAttribute("href") || "") ||
-        /home|profile|search/i.test(link.getAttribute("aria-label") || "")
-      ).length;
-      const rect = nav.getBoundingClientRect();
-      if (routeHits >= 3 && rect.bottom >= height - 90) hide(nav, "native-navigation");
-    });
-  }
 
   function assessPage() {
     const path = location.pathname.toLowerCase();
@@ -152,7 +137,13 @@
   addEventListener("pageshow", schedule);
   const observe = () => {
     if (document.documentElement) {
-      new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+      new MutationObserver(schedule).observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ["href", "aria-label", "role", "title"]
+      });
     }
     schedule();
   };

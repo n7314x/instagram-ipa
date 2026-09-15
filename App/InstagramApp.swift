@@ -40,14 +40,11 @@ private struct RootView: View {
             } else if appState.sessionState == .authenticated {
                 authenticatedShell
                     .transition(.opacity)
-            } else {
+            } else if appState.sessionState == .loggedOut {
                 InstagramWebView(webView: appState.webViews.webView(for: .home))
                     .ignoresSafeArea(.container, edges: .bottom)
-                    .overlay {
-                        if appState.sessionState == .unknown {
-                            ProgressView().controlSize(.large)
-                        }
-                    }
+            } else {
+                ProgressView().controlSize(.large)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: dailyLimit.isLocked)

@@ -55,6 +55,16 @@ final class InstagramBridgeHandler: NSObject, WKScriptMessageHandlerWithReply {
             }
             delegate?.bridgeDidDetectSession(state)
             replyHandler(true, nil)
+        case "diagnostic":
+            guard let code = body["code"] as? String,
+                  Self.allowedDiagnosticCodes.contains(code) else {
+                replyHandler(false, nil)
+                return
+            }
+#if DEBUG
+            NSLog("Instagram web diagnostic: %@", code)
+#endif
+            replyHandler(true, nil)
         default:
             replyHandler(false, nil)
         }
@@ -73,6 +83,12 @@ final class InstagramBridgeHandler: NSObject, WKScriptMessageHandlerWithReply {
         let host = origin.host.lowercased()
         return host == "instagram.com" || host.hasSuffix(".instagram.com")
     }
+
+    private static let allowedDiagnosticCodes: Set<String> = [
+        "web-navigation-hidden",
+        "app-open-cta-hidden",
+        "app-open-cta-blocked"
+    ]
 }
 
 /// A weak forwarding object prevents WKUserContentController from retaining the
